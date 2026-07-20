@@ -49,7 +49,7 @@ The preview UI comes from the same traversal. The graph the dictionary implies i
 
 The property the cloned graph has is called isomorphic to the original. Isomorphic means "same shape": a one-to-one mapping between original assets and cloned assets, where every reference between originals has a matching reference between their clones. Nothing more, nothing less.
 
-![Unity duplicate vs deep clone](Images~/diagram-2-isomorphism.svg)
+![Original graph, naive copy, isomorphic clone](Images~/diagram-2-isomorphism.svg)
 
 This is a stronger claim than "everything got copied." A naive recursive copy, the kind you find in old forum threads, fails it two ways. Either it duplicates SharedC once per referencer, quietly changing your data model, or it follows a reference cycle until the stack dies. Same contents, wrong shape.
 
@@ -61,7 +61,7 @@ The first mechanism was attributes. Mark a field, and the reflection walk honors
 
 The clone graph window is the answer to that. The same traversal that powers the clone renders the decision surface itself: the full tree, with clone or share toggled per node, inspected before anything executes. Attributes remain as programmer-set defaults. The window is the per-operation override, made by the person actually doing the cloning, before the operation runs.
 
-![Unity duplicate vs deep clone](Images~/TreeViewInEditor.png)
+![Clone graph window](Images~/TreeViewInEditor.png)
 
 The third tier is persistence. User choices are saved to an .asset file keyed by the root asset, so the next clone of the same tree recalls its configuration. Keying by root captures the decision at the granularity it is actually made: "when cloning EnemyTemplate, effects are copied, materials shared" is a property of that tree, not of any field in the abstract. And because it is an asset file rather than an editor preference, it goes into version control. One person's boundary decisions become the team's defaults for that template.
 
@@ -80,7 +80,7 @@ The pipeline that works is counterintuitive: to clone the structure, you first d
 5. Remap the remaining MonoBehaviour fields on non-nested objects through the same field cloning used on the SO side.
 6. Save the result as a new prefab asset, destroy the scene instance, and register the original-to-clone pair in a lookup.
 
-![Unity duplicate vs deep clone](Images~/diagram-3-prefab-pipeline.svg)
+![Intact chain, captured metadata, unpacked, rebuilt](Images~/diagram-3-prefab-pipeline.svg)
 
 That last step matters: the prefab pipeline has its own identity map, with the same memoization the SO side uses. The recursive clone in step 4 checks the lookup first, so a prefab nested in two places clones once, diamond-shaped prefab dependencies keep their shape, and depth is handled by the recursion stack rather than an explicit dependency sort. Children complete before parents save, so the rebuild is effectively bottom-up without ever computing an ordering. It is the same architectural idea applied twice: the isomorphism guarantee spans both asset types.
 
