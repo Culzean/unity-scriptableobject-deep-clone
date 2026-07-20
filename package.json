@@ -1,0 +1,11 @@
+{
+    "name": "com.atticar.deep-clone-lite",
+    "version": "1.0.0",
+    "displayName": "Deep Clone Lite",
+    "description": "Minimal ScriptableObject deep-cloning utility for Unity.",
+    "unity": "2022.3",
+    "license": "MIT",
+    "author": {
+        "name": "Atticar Reality"
+    }
+}
