@@ -103,6 +103,6 @@ Field-level discovery instead of an opaque dependency API, so the graph contains
 
 Two things are honestly unfinished: the two persistence mechanisms want consolidating, and nested instance overrides do not yet survive the rebuild.
 
-The tool is [Deep Clone on the Unity Asset Store]([https://assetstore.unity.com/packages/slug/321866](https://assetstore.unity.com/packages/tools/utilities/deep-clone-scriptableobjects-prefabs-321866)).
+The tool is [Deep Clone on the Unity Asset Store](https://assetstore.unity.com/packages/tools/utilities/deep-clone-scriptableobjects-prefabs-321866).
 
 Happy to hear any thoughts or discussion on this tooling
