@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrGray" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#495057"/>
+    </marker>
+    <marker id="arrRed" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#c92a2a"/>
+    </marker>
+    <marker id="arrTeal" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#0b7285"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="440" fill="#ffffff"/>
+
+  <!-- Panel titles -->
+  <text x="225" y="34" text-anchor="middle" font-size="17" font-weight="bold" fill="#212529">Unity duplicate (shallow)</text>
+  <text x="675" y="34" text-anchor="middle" font-size="17" font-weight="bold" fill="#212529">Deep clone</text>
+
+  <!-- divider -->
+  <line x1="450" y1="20" x2="450" y2="420" stroke="#dee2e6" stroke-width="1"/>
+
+  <!-- ============ LEFT PANEL ============ -->
+  <!-- Original chain -->
+  <text x="120" y="66" text-anchor="middle" font-size="12" fill="#868e96">original</text>
+  <rect x="50" y="80" width="140" height="40" rx="4" fill="#f8f9fa" stroke="#495057" stroke-width="1.5"/>
+  <text x="120" y="105" text-anchor="middle" font-size="13" fill="#212529">EnemyConfig</text>
+
+  <rect x="50" y="180" width="140" height="40" rx="4" fill="#f8f9fa" stroke="#495057" stroke-width="1.5"/>
+  <text x="120" y="205" text-anchor="middle" font-size="13" fill="#212529">AbilitySet</text>
+
+  <rect x="50" y="280" width="140" height="40" rx="4" fill="#f8f9fa" stroke="#495057" stroke-width="1.5"/>
+  <text x="120" y="305" text-anchor="middle" font-size="13" fill="#212529">Effect</text>
+
+  <line x1="120" y1="120" x2="120" y2="176" stroke="#495057" stroke-width="1.5" marker-end="url(#arrGray)"/>
+  <line x1="120" y1="220" x2="120" y2="276" stroke="#495057" stroke-width="1.5" marker-end="url(#arrGray)"/>
+
+  <!-- Duplicate -->
+  <text x="330" y="66" text-anchor="middle" font-size="12" fill="#868e96">Ctrl+D creates one asset</text>
+  <rect x="260" y="80" width="140" height="40" rx="4" fill="#fff5f5" stroke="#c92a2a" stroke-width="1.5"/>
+  <text x="330" y="105" text-anchor="middle" font-size="13" fill="#212529">EnemyConfig (1)</text>
+
+  <!-- red arrows back to originals -->
+  <path d="M 300 120 C 280 155, 230 180, 194 196" fill="none" stroke="#c92a2a" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrRed)"/>
+  <path d="M 340 120 C 350 200, 280 270, 194 296" fill="none" stroke="#c92a2a" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrRed)"/>
+
+  <text x="330" y="392" text-anchor="middle" font-size="12.5" fill="#c92a2a">references still point</text>
+  <text x="330" y="409" text-anchor="middle" font-size="12.5" fill="#c92a2a">at the originals</text>
+
+  <!-- ============ RIGHT PANEL ============ -->
+  <!-- Original chain (faded) -->
+  <text x="570" y="66" text-anchor="middle" font-size="12" fill="#868e96">original</text>
+  <rect x="500" y="80" width="140" height="40" rx="4" fill="#f8f9fa" stroke="#adb5bd" stroke-width="1.5"/>
+  <text x="570" y="105" text-anchor="middle" font-size="13" fill="#495057">EnemyConfig</text>
+
+  <rect x="500" y="180" width="140" height="40" rx="4" fill="#f8f9fa" stroke="#adb5bd" stroke-width="1.5"/>
+  <text x="570" y="205" text-anchor="middle" font-size="13" fill="#495057">AbilitySet</text>
+
+  <rect x="500" y="280" width="140" height="40" rx="4" fill="#f8f9fa" stroke="#adb5bd" stroke-width="1.5"/>
+  <text x="570" y="305" text-anchor="middle" font-size="13" fill="#495057">Effect</text>
+
+  <line x1="570" y1="120" x2="570" y2="176" stroke="#adb5bd" stroke-width="1.5" marker-end="url(#arrGray)"/>
+  <line x1="570" y1="220" x2="570" y2="276" stroke="#adb5bd" stroke-width="1.5" marker-end="url(#arrGray)"/>
+
+  <!-- Cloned chain -->
+  <text x="780" y="66" text-anchor="middle" font-size="12" fill="#0b7285">every asset cloned</text>
+  <rect x="710" y="80" width="140" height="40" rx="4" fill="#e3fafc" stroke="#0b7285" stroke-width="1.5"/>
+  <text x="780" y="105" text-anchor="middle" font-size="13" fill="#212529">EnemyConfig*</text>
+
+  <rect x="710" y="180" width="140" height="40" rx="4" fill="#e3fafc" stroke="#0b7285" stroke-width="1.5"/>
+  <text x="780" y="205" text-anchor="middle" font-size="13" fill="#212529">AbilitySet*</text>
+
+  <rect x="710" y="280" width="140" height="40" rx="4" fill="#e3fafc" stroke="#0b7285" stroke-width="1.5"/>
+  <text x="780" y="305" text-anchor="middle" font-size="13" fill="#212529">Effect*</text>
+
+  <line x1="780" y1="120" x2="780" y2="176" stroke="#0b7285" stroke-width="1.5" marker-end="url(#arrTeal)"/>
+  <line x1="780" y1="220" x2="780" y2="276" stroke="#0b7285" stroke-width="1.5" marker-end="url(#arrTeal)"/>
+
+  <text x="780" y="392" text-anchor="middle" font-size="12.5" fill="#0b7285">references point at clones:</text>
+  <text x="780" y="409" text-anchor="middle" font-size="12.5" fill="#0b7285">fully independent tree</text>
+</svg>
