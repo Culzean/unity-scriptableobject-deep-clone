@@ -6,7 +6,7 @@ This is a lite version of the full Deep Clone asset which can be found here:
 https://assetstore.unity.com/packages/tools/utilities/deep-clone-scriptableobjects-prefabs-321866
 
 
-For those interested here is a dicussion on the full asset.
+For those interested here is a discussion on the full asset.
 
 # Deep Cloning ScriptableObjects and Prefabs in Unity: How It Actually Works
 
@@ -105,4 +105,4 @@ Two things are honestly unfinished: the two persistence mechanisms want consolid
 
 The tool is [Deep Clone on the Unity Asset Store]([https://assetstore.unity.com/packages/slug/321866](https://assetstore.unity.com/packages/tools/utilities/deep-clone-scriptableobjects-prefabs-321866)).
 
-Happy to hear any thoughts or dicussion on this tooling
+Happy to hear any thoughts or discussion on this tooling
