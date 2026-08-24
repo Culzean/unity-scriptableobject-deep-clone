@@ -1,51 +1,88 @@
-# Deep Clone Lite by Atticar
+# Deep Clone for Unity: true deep copy of ScriptableObject hierarchies
 
-This helper allows deep cloning scriptable objects in Unity editor. 
-This is a lite version of the full Deep Clone asset which can be found here:
+Unity's duplicate is a shallow copy. Press Ctrl+D on a ScriptableObject and you get a new asset, but every reference field still points at the originals. `Instantiate` does the same thing in memory, and `EditorUtility.CopySerialized` copies the fields of one object into another without touching what those fields reference. Edit a child on the "copy" and you are editing shared state.
 
-https://assetstore.unity.com/packages/tools/utilities/deep-clone-scriptableobjects-prefabs-321866
+For data-driven projects built on template assets, an enemy config referencing an ability set referencing effect definitions, this makes standard duplication nearly useless. A correct deep copy has to walk every field, recurse into every child ScriptableObject it finds (including the ones inside arrays, lists, and nested serializable classes), clone each child once even when it is referenced from several places, and write each clone to disk as an independent asset with its references pointing at the other clones.
 
+This repository is **Deep Clone Lite**, a free, minimal Unity package that does exactly that for ScriptableObjects in the Editor. The full tool, [Deep Clone for Unity on the Asset Store](https://assetstore.unity.com/packages/tools/utilities/deep-clone-scriptableobjects-prefabs-321866), adds prefab cloning, an Asset Tree Preview for confirming what will be cloned before committing, and Clone Profiles for saving clone and reference settings per asset.
 
-For those interested here is a discussion on the full asset.
+## Install
 
-# Deep Cloning ScriptableObjects and Prefabs in Unity: How It Actually Works
+Add the package through the Unity Package Manager using the Git URL:
 
-Unity's standard duplicate is a shallow copy. Press Ctrl+D on a ScriptableObject and Unity delivers a new asset, but every reference field still points at the originals. Edit a child on the "copy" and you are editing shared state. For data-driven projects built on template assets, an enemy config referencing an ability set referencing effect definitions, this makes standard duplication nearly useless.
+```
+https://github.com/Culzean/unity-scriptableobject-deep-clone.git
+```
 
-![Unity duplicate vs deep clone](Images~/diagram-1-shallow-vs-deep.svg)
+Or add it to `Packages/manifest.json`:
 
-Deep Clone does its own discovery: a reflection walk over every field of the ScriptableObject, recursing into each child ScriptableObject it finds. Each field is shallow copied unless it holds a ScriptableObject or a prefab. A ScriptableObject field triggers recursion; prefab fields branch into a separate pipeline, covered below. The walk also finds children hiding in arrays, lists, and nested serializable classes and structs, so it is thorough by necessity. 
+```json
+"com.atticar.deep-clone-lite": "https://github.com/Culzean/unity-scriptableobject-deep-clone.git"
+```
 
-## Why not AssetDatabase.GetDependencies
+Supports Unity 2022.3 LTS and later. Editor only.
+
+## Usage
+
+Right-click a ScriptableObject in the Project window and choose **[MenuItem path]**. The asset and every nested ScriptableObject it references are cloned into a folder you pick, with all references rewired to the clones.
+
+From code:
+
+```csharp
+[Static entry point signature, e.g. DeepCloneLite.Clone(sourceAsset, "Assets/Clones")]
+```
+
+## What Lite does
+
+- Reflection walk over every serialized field, recursing into child ScriptableObjects found directly or inside arrays, lists, and serializable classes and structs
+- Identity map so shared children are cloned once and reference cycles terminate
+- Saves each clone as a new `.asset` file in the chosen folder
+- One static entry point and one menu item
+
+## What Lite does not do
+
+- Prefab cloning, including nested prefab chains and variants
+- Asset Tree Preview: see and confirm everything to be cloned before committing, with per-node clone/reference toggles
+- Clone Profiles: save deep clone and reference settings per asset, ready for next time
+- `[ShallowClone]` and `[SkipPrefabClone]` field attributes
+
+Those are in [Deep Clone for Unity](https://assetstore.unity.com/packages/tools/utilities/deep-clone-scriptableobjects-prefabs-321866).
+
+## How it works
+
+What follows is the design behind the full tool. The Lite package uses the same reflection walk and identity map described in the first sections.
+
+### Why not AssetDatabase.GetDependencies
 
 The obvious starting point is `AssetDatabase.GetDependencies`. Hand it a path, get back everything the asset references, recursively if you like. I never used it, for two reasons.
 
-First, I consider this an opaque area of Unity. The API does not precisely specify what counts as a dependency. The results mix concerns: scripts, implicit importer decisions, things you would never consider part of your data model. When correctness is the goal, you cannot delegate discovery to such an opaque API whose output you cannot fully predict. A missed or misclassified reference in a cloning tool is not a cosmetic bug. It is a silent shallow copy, the exact failure the tool exists to prevent.
+First, I consider this an opaque area of Unity. The API does not precisely specify what counts as a dependency. The results mix concerns: scripts, implicit importer decisions, things you would never consider part of your data model. When correctness is the goal, you cannot delegate discovery to an API whose output you cannot fully predict. A missed or misclassified reference in a cloning tool is not a cosmetic bug. It is a silent shallow copy, the exact failure the tool exists to prevent.
 
-Second, cloning amplifies over-collection. For most consumers of GetDependencies, a false positive is noise. For a cloning tool, every false positive becomes a copied file on disk. Pull in a shader, a texture atlas, an editor asset that was never meant to be duplicated, and "clone my enemy config tree" turns into duplicating half the project. The asset sets I originally built this for were already heavy. An over-collecting discovery pass does not degrade gracefully. We get a long wait and then an editor crash.
+Second, cloning amplifies over-collection. For most consumers of `GetDependencies`, a false positive is noise. For a cloning tool, every false positive becomes a copied file on disk. Pull in a shader, a texture atlas, an editor asset that was never meant to be duplicated, and "clone my enemy config tree" turns into duplicating half the project. The asset sets I originally built this for were already heavy. An over-collecting discovery pass does not degrade gracefully. We get a long wait and then an editor crash.
 
-This tool is for artists and designers, they have a threshold for janky tooling – but push it too far and they will complain bitterly. A programmer tolerates a flaky tool they can debug. A designer uninstalls it and warns their team. That constraint shaped everything downstream: discovery has to be predictable, the operation has to be inspectable before it runs. The aim is for this cloning to be boring in the best sense.
+This tool is for artists and designers. They have a threshold for janky tooling, but push it too far and they will complain bitterly. A programmer tolerates a flaky tool they can debug. A designer uninstalls it and warns their team. That constraint shaped everything downstream: discovery has to be predictable, and the operation has to be inspectable before it runs. The aim is for cloning to be boring in the best sense.
 
 So Deep Clone does its own discovery.
 
-## The reflection walk
+### The reflection walk
 
-So Deep Clone using reflection to do a walk through all the fields in your scriptable object and then recursively walk through all the child SciptableObjects found. Each field is shallow copied unless it holds a ScriptableObject or a prefab. A ScriptableObject field triggers recursion: clone that asset, walk its fields, and so on down the tree. Prefab fields branch into a separate pipeline, covered below.
-The recursive walk will also cleverly look for child ScriptableObjects hiding in arrays, lists, custom classes, structs, etc. The walk has to be extra thorough.
+Deep Clone uses reflection to walk every field of the ScriptableObject, then recursively walks every child ScriptableObject it finds. Each field is shallow copied unless it holds a ScriptableObject or a prefab. A ScriptableObject field triggers recursion: clone that asset, walk its fields, and so on down the tree. Prefab fields branch into a separate pipeline, covered below. The walk also looks for child ScriptableObjects hiding in arrays, lists, custom classes, and structs. It has to be thorough by necessity.
+
+![Unity duplicate vs deep clone](Images~/diagram-1-shallow-vs-deep.svg)
 
 Working at field level rather than path level buys the property that defines the whole design: references are built correct at creation time. When the walk reaches a ScriptableObject field, it assigns the cloned child directly into the cloned parent's field. There is no separate rewiring pass, no GUID remapping over serialized text, because there is nothing to rewire. The field is the unit of work, and each field is written once, correctly.
 
-## The identity map
+### The identity map
 
 One dictionary sits at the center of the SO pipeline: original asset to cloned asset. The ordering matters. When the walk encounters an asset for the first time, it creates the clone, registers it in the dictionary, and only then populates its fields.
 
 That one mechanism pays off three times.
 
-Shared references stay shared. If AssetA and AssetB both reference SharedC, the walk clones C once on first encounter. The second encounter hits the dictionary and returns the same cloned instance. Both cloned parents reference one cloned C, exactly mirroring the original.
+**Shared references stay shared.** If AssetA and AssetB both reference SharedC, the walk clones C once on first encounter. The second encounter hits the dictionary and returns the same cloned instance. Both cloned parents reference one cloned C, exactly mirroring the original.
 
-Cycles terminate for free. If A references B and B references A, the walk re-enters A, finds it already registered, and returns the cached clone. No visited set, no cycle detection pass. Termination is a side effect of the identity guarantee, and it works precisely because registration happens before population. Register after, and mutual references either recurse forever or duplicate.
+**Cycles terminate for free.** If A references B and B references A, the walk re-enters A, finds it already registered, and returns the cached clone. No visited set, no cycle detection pass. Termination is a side effect of the identity guarantee, and it works precisely because registration happens before population. Register after, and mutual references either recurse forever or duplicate.
 
-The preview UI comes from the same traversal. The graph the dictionary implies is the graph the preview window renders. There is no second discovery path that could drift from what the clone actually does. What you see is what will happen.
+**The preview UI comes from the same traversal.** The graph the dictionary implies is the graph the preview window renders. There is no second discovery path that could drift from what the clone actually does. What you see is what will happen.
 
 The property the cloned graph has is called isomorphic to the original. Isomorphic means "same shape": a one-to-one mapping between original assets and cloned assets, where every reference between originals has a matching reference between their clones. Nothing more, nothing less.
 
@@ -53,7 +90,7 @@ The property the cloned graph has is called isomorphic to the original. Isomorph
 
 This is a stronger claim than "everything got copied." A naive recursive copy, the kind you find in old forum threads, fails it two ways. Either it duplicates SharedC once per referencer, quietly changing your data model, or it follows a reference cycle until the stack dies. Same contents, wrong shape.
 
-## The boundary problem
+### The boundary problem
 
 Walking the graph turned out not to be the hard problem. The hard problem is that every reference in the graph is a decision: clone it, or keep it shared. And there is no universally correct answer. A palette of shared materials should stay shared. A stats block should be copied. Only the user knows which is which, and the answer can differ per asset and per clone operation.
 
@@ -63,11 +100,11 @@ The clone graph window is the answer to that. The same traversal that powers the
 
 ![Clone graph window](Images~/TreeViewInEditor.png)
 
-The third tier is persistence. User choices are saved to an .asset file keyed by the root asset, so the next clone of the same tree recalls its configuration. Keying by root captures the decision at the granularity it is actually made: "when cloning EnemyTemplate, effects are copied, materials shared" is a property of that tree, not of any field in the abstract. And because it is an asset file rather than an editor preference, it goes into version control. One person's boundary decisions become the team's defaults for that template.
+The third tier is persistence. User choices are saved to an `.asset` file keyed by the root asset, so the next clone of the same tree recalls its configuration. Keying by root captures the decision at the granularity it is actually made: "when cloning EnemyTemplate, effects are copied, materials shared" is a property of that tree, not of any field in the abstract. And because it is an asset file rather than an editor preference, it goes into version control. One person's boundary decisions become the team's defaults for that template.
 
 Alongside the per-root state there are Clone Profiles, deliberately created reusable configurations stored as ScriptableObjects. Honest note: these two persistence mechanisms grew separately, and there is an obvious consolidation waiting. Scope for improvement.
 
-## Prefabs: destroy to clone
+### Prefabs: destroy to clone
 
 Prefabs get their own pipeline because the reflection walk cannot see them properly. Nesting is not a field reference. A nested prefab instance is internal prefab structure, invisible to a field-level traversal. And the tools that do understand prefab structure, the `PrefabUtility` APIs, do not mix with reflection. Water and oil. Worse, actively cloning child prefabs while they are still connected inside a parent throws exceptions and does not produce the desired result.
 
@@ -91,20 +128,22 @@ The detail that cost the most blood is variants. `PrefabUtility` offers several 
 // (GetCorrespondingObjectFromOriginalSource would return the ultimate base, not the variant)
 ```
 
-`GetCorrespondingObjectFromOriginalSource` walks the entire variant chain to the ultimate base. Ask it about a SwordVariant instance and it hands you Sword. Build your metadata on that and the rebuild is silently wrong: the clone re-nests against the base, and every override the variant layer carried, the entire reason the variant exists, evaporates. No exception, no warning. The clone opens fine and has quietly discarded a layer of your data model. `GetPrefabAssetPathOfNearestInstanceRoot` stops at the nearest root, the variant itself, which is the answer cloning actually needs. This is the GetDependencies distrust from the top of the article, made concrete: near-identical APIs embodying different definitions of "source," where picking by name produces silent shallow copying.
+`GetCorrespondingObjectFromOriginalSource` walks the entire variant chain to the ultimate base. Ask it about a SwordVariant instance and it hands you Sword. Build your metadata on that and the rebuild is silently wrong: the clone re-nests against the base, and every override the variant layer carried, the entire reason the variant exists, evaporates. No exception, no warning. The clone opens fine and has quietly discarded a layer of your data model. `GetPrefabAssetPathOfNearestInstanceRoot` stops at the nearest root, the variant itself, which is the answer cloning actually needs. This is the `GetDependencies` distrust from the top, made concrete: near-identical APIs embodying different definitions of "source," where picking by name produces silent shallow copying.
 
 One known limitation, visible in the pipeline above: per-instance overrides on nested prefabs, a tweaked component value, a disabled child, are not currently preserved. Step 4 places a fresh instance of the cloned prefab; the modified subtree it replaces was destroyed. Capturing overrides across the unpack boundary is unsolved here, and there is scope to address it. In practice the blast radius is smaller than it sounds: customizations a team intends to keep tend to get promoted into variants, and variant chains are handled correctly. What is lost skews toward one-off tweaks.
 
 Variants are also worth a word as the boundary of this tool. For a single prefab, Create Variant already is a kind of clone, and Unity gives you it for free. But a variant is a linked copy: it shares everything downstream, the same nested prefabs, the same ScriptableObject references, the same materials. Deep Clone exists for the case variants structurally cannot produce, a genuinely independent tree.
 
-## What the design buys
+### What the design buys
 
 Field-level discovery instead of an opaque dependency API, so the graph contains exactly what the data model says and nothing else. An identity map with create-register-populate ordering, so shared references stay shared and cycles cost nothing, on both asset types. One traversal feeding both the preview and the clone, so the tool cannot show one thing and do another. And boundary decisions moved out of code and into the hands of the people actually doing the cloning, with their choices persisted per tree and shared through version control.
 
 Two things are honestly unfinished: the two persistence mechanisms want consolidating, and nested instance overrides do not yet survive the rebuild.
 
-The tool is [Deep Clone on the Unity Asset Store](https://assetstore.unity.com/packages/tools/utilities/deep-clone-scriptableobjects-prefabs-321866).
+## Links
 
-Post: https://www.linkedin.com/pulse/deep-cloning-nested-scriptableobjects-prefabs-unity-daniel-waine-bb26c/
+- [Deep Clone for Unity on the Asset Store](https://assetstore.unity.com/packages/tools/utilities/deep-clone-scriptableobjects-prefabs-321866)
+- [Article on LinkedIn](https://www.linkedin.com/pulse/deep-cloning-nested-scriptableobjects-prefabs-unity-daniel-waine-bb26c/)
+- 
 
-Happy to hear any thoughts or discussion on this tooling
+Deep Clone is built by Daniel Waine at Atticar. Thoughts and discussion on the tooling are welcome in Issues.
